@@ -286,7 +286,7 @@ def plot_spectro(Qtransform, gps_event, channel, add_chirp,
                  twindow=[0.5, 2, 10], m1=20, m2=10, s1z=0, s2z=0,
                  f_low=20, pn_2order=7, npoints=100,
                  approximant='SEOBNRv4', plot_ylim=[20,1400],
-                 outDir='spectro.png'):
+                 outDir='spectro.png',make_gif=False,outGif=None):
     """ Create spectrogramm plot"""
 
     # Get loudest Q-plane
@@ -356,6 +356,35 @@ def plot_spectro(Qtransform, gps_event, channel, add_chirp,
             ax.set_xlabel(r'Seconds from $t_0$')
             #ax.set_epoch(tevent_mean)
             ax.colorbar(clim=(0, 35), label='Normalised energy')
+
+            if make_gif and add_chirp:
+
+                import imageio
+                import os
+
+                #temporarily save plot without chirp
+                plt.title('Omegascans of V1 (Q = %.1f): %s at %f' % (Q_loudest, channel_title, tevent_mean))
+                #plt.tight_layout()
+                plt.savefig("temp_save_no_chirp.png")
+
+                #add chirp
+                for tbank, fbank in zip(track_t_list, track_f_list):
+                    ax.plot(tbank, fbank, lw=2, color='r')
+
+                #temporarily save plot wit chirp
+                #plt.tight_layout()
+                plt.savefig("temp_save_with_chirp.png")
+                
+                images = []
+                for filename in ["temp_save_no_chirp.png","temp_save_with_chirp.png"]:
+                    images.append(imageio.imread(filename))
+                imageio.mimsave(outGif, images,fps=0.5)
+
+                #remove the temporare files
+                os.remove("temp_save_no_chirp.png")
+                os.remove("temp_save_with_chirp.png")
+
+
             if add_chirp:
                 for tbank, fbank in zip(track_t_list, track_f_list):
                     ax.plot(tbank, fbank, lw=2, color='r')
@@ -396,10 +425,44 @@ def plot_spectro(Qtransform, gps_event, channel, add_chirp,
             axes[i].set_xlabel(r'Seconds from $t_0$')
             #axes[i].set_epoch(tevent_mean)
             axes[i].colorbar(clim=(0, 35), label='Normalised energy')
+
+
+        if make_gif and add_chirp:
+
+            import imageio
+            import os
+
+            #temporarily save plot without chirp
+            plt.subplots_adjust(wspace=0.3)
+            fig.suptitle('Omegascans of V1 (Q = %.1f): %s at %f' % (Q_loudest, channel_title, tevent_mean),
+                         fontweight='bold')
+            #plt.tight_layout()
+            plt.savefig("temp_save_no_chirp.png")
+
+        for i, wind in enumerate(twindow):
             if add_chirp:
                 for tbank, fbank in zip(track_t_list, track_f_list):
                     axes[i].plot(tbank, fbank, lw=2, color='r')
-        plt.subplots_adjust(wspace=0.3)
+            plt.subplots_adjust(wspace=0.3)
+
+        if make_gif and add_chirp:
+            #add chirp
+            #for tbank, fbank in zip(track_t_list, track_f_list):
+                #axes[i].plot(tbank, fbank, lw=2, color='r')
+
+            #temporarily save plot wit chirp
+            #plt.tight_layout()
+            plt.savefig("temp_save_with_chirp.png")
+            
+            images = []
+            for filename in ["temp_save_no_chirp.png","temp_save_with_chirp.png"]:
+                images.append(imageio.imread(filename))
+            imageio.mimsave(outGif, images,fps=0.5)
+
+            #remove the temporare files
+            os.remove("temp_save_no_chirp.png")
+            os.remove("temp_save_with_chirp.png")
+
         fig.suptitle('Omegascans of V1 (Q = %.1f): %s at %f' % (Q_loudest, channel_title, tevent_mean),
                      fontweight='bold')
         #fig.tight_layout()
@@ -637,6 +700,15 @@ if __name__ == "__main__":
                        action='store_true',
                        help='Print all parameters values if used.')
 
+   parser.add_argument('--make_gif',
+                       dest='make_gif',
+                       action='store_true',
+                       help='If true save a .gif file at the same location than --outDir')
+
+   parser.add_argument('--outGif',
+                       dest='outGif',
+                       type=str,
+                       help='the output path of the .gif file')
 
    args = parser.parse_args()
 
@@ -647,6 +719,9 @@ if __name__ == "__main__":
            print ('%s : %s' % (key, value))
        print ('-------------------\n')
 
+   if args.make_gif:
+       if args.outGif is None:
+           raise ValueError('You should specifie an output path using --outGif while requesting a .gif file')
 
    if args.frange:
        frange = args.frange
@@ -719,7 +794,7 @@ if __name__ == "__main__":
                         m2=args.m2, s1z=args.s1, s2z=args.s2,
                         f_low=args.f_low, pn_2order=args.pn_2order,
                         npoints=args.npoints, approximant=args.approximant,
-                        plot_ylim=args.plot_frange, outDir=args.outDir)
+                        plot_ylim=args.plot_frange, outDir=args.outDir, make_gif=args.make_gif,outGif=args.outGif)
            status = True
        except:
            print ('ERROR when generating the spectrogram plot.')
